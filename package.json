@@ -1,0 +1,13 @@
+{
+  "name": "miniroll",
+  "description": "A TypeScript-first dice rolling library.",
+  "author": "faewd <mail@faew.dev>",
+  "license": "ISC",
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {},
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}
