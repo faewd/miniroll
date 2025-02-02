@@ -10,7 +10,7 @@ import { ParserError } from "./error";
 
 const DICE_PATTERN =
   /^(?<count>\d+)?d(?<sides>\d+)(?<modifier>(([dk][hl]\d*)|rr(?<comparator><>|<=?|>=?|=)?(?<target>\d+)|!)?)/i;
-const IDENT_PATTERN = /^[a-zA-Z_\.][a-zA-Z_\.0-9]/;
+const IDENT_PATTERN = /^[a-zA-Z_\.][a-zA-Z_\.0-9]*/;
 const NUM_PATTERN = /^(0|([1-9][0-9]*))/;
 
 type ParseResult<T> =
