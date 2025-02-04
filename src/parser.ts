@@ -112,7 +112,7 @@ function roll(): Parser<Roll> {
     const match = input.match(DICE_PATTERN);
     if (match === null) return fail(input, "dice roll");
     const roll = {
-      count: parseInt(match.groups!.count ?? 1, 10),
+      count: parseInt(match.groups!.count ?? "1", 10),
       sides: parseInt(match.groups!.sides, 10),
       modifier: match.groups!.modifier
         ? resolveRollModifier(match.groups!, match[0])

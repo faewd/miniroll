@@ -4,6 +4,8 @@ export type Roll = {
   modifier: RollModifier | null;
 };
 
+export type ComparisonOperator = "=" | "<>" | "<" | ">" | "<=" | ">=";
+
 export type RollModifier =
   | { kind: "explode" }
   | { kind: "keep"; count: number; end: "highest" | "lowest" }
@@ -11,7 +13,7 @@ export type RollModifier =
   | {
       kind: "reroll";
       target: number;
-      comparator: "=" | "<>" | "<" | ">" | "<=" | ">=";
+      comparator: ComparisonOperator;
     };
 
 export const operators = ["-", "+", "/", "*"] as const;
