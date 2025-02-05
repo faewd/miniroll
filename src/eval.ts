@@ -1,21 +1,27 @@
-import { Expression, Operator, Roll, RollModifier, Term } from "./ast";
+import {
+  BinaryExpression,
+  Expression,
+  Operator,
+  Roll,
+  RollModifier,
+  TermExpression,
+} from "./ast";
 
-export type EvalResult =
+export type EvalResult = { value: number; source: Expression } & (
   | {
       kind: "roll";
-      value: number;
       rolls: number[];
       rawRolls: number[];
       dropped: number[];
-      source: Roll;
     }
-  | { kind: "num"; value: number }
-  | { kind: "ident"; value: number; source: string }
+  | { kind: "num" }
+  | { kind: "ident" }
   | {
       kind: "binary";
       value: number;
-      source: { lhs: EvalResult; op: Operator; rhs: EvalResult };
-    };
+      intermediate: { lhs: EvalResult; op: Operator; rhs: EvalResult };
+    }
+);
 
 export type Context = {
   data: Map<string, number>;
@@ -24,26 +30,22 @@ export type Context = {
 export function evaluate(expr: Expression, ctx: Context): EvalResult {
   switch (expr.kind) {
     case "term":
-      return evaluateTerm(expr.term, ctx);
+      return evaluateTerm(expr, ctx);
     case "binary":
-      const { lhs, op, rhs } = expr;
-      return evaluateBinOp(lhs, op, rhs, ctx);
+      return evaluateBinOp(expr, ctx);
   }
 }
 
-function evaluateBinOp(
-  lhs: Expression,
-  op: Operator,
-  rhs: Expression,
-  ctx: Context
-): EvalResult {
-  const lVal = evaluate(lhs, ctx);
-  const rVal = evaluate(rhs, ctx);
-  const value = computeBinOp(lVal.value, op, rVal.value);
+function evaluateBinOp(expr: BinaryExpression, ctx: Context): EvalResult {
+  const { op } = expr;
+  const lhs = evaluate(expr.lhs, ctx);
+  const rhs = evaluate(expr.rhs, ctx);
+  const value = computeBinOp(lhs.value, op, rhs.value);
   return {
     kind: "binary",
     value,
-    source: { lhs: lVal, op, rhs: rVal },
+    intermediate: { lhs, op, rhs },
+    source: expr,
   };
 }
 
@@ -60,24 +62,26 @@ function computeBinOp(a: number, op: Operator, b: number): number {
   }
 }
 
-function evaluateTerm(term: Term, ctx: Context): EvalResult {
-  if (typeof term === "number") return { kind: "num", value: term };
+function evaluateTerm(expr: TermExpression, ctx: Context): EvalResult {
+  const { term } = expr;
+  if (typeof term === "number")
+    return { kind: "num", value: term, source: expr };
   if (typeof term === "string") {
     const value = ctx.data.get(term);
     if (value === undefined)
       throw new EvalError(
         `Failed to evaluate term '${term}' - identifier is undefined`
       );
-    return { kind: "ident", value, source: term };
+    return { kind: "ident", value, source: expr };
   }
-  return evaluateRoll(term);
+  return evaluateRoll(expr, term);
 }
 
 function rand(sides: number) {
   return Math.floor(Math.random() * sides) + 1;
 }
 
-function evaluateRoll(roll: Roll): EvalResult {
+function evaluateRoll(expr: TermExpression, roll: Roll): EvalResult {
   const { count, sides, modifier } = roll;
   const rawRolls: number[] = [];
   for (let i = 0; i < count; i++) {
@@ -102,7 +106,7 @@ function evaluateRoll(roll: Roll): EvalResult {
     rolls: kept,
     rawRolls,
     dropped,
-    source: roll,
+    source: expr,
   };
 }
 

@@ -22,6 +22,12 @@ export type Operator = (typeof operators)[number];
 
 export type Term = Roll | number | string;
 
-export type Expression =
-  | { kind: "term"; term: Term }
-  | { kind: "binary"; lhs: Expression; op: Operator; rhs: Expression };
+export type Expression = TermExpression | BinaryExpression;
+
+export type TermExpression = { kind: "term"; term: Term };
+export type BinaryExpression = {
+  kind: "binary";
+  lhs: Expression;
+  op: Operator;
+  rhs: Expression;
+};
