@@ -6,25 +6,35 @@ import {
   RollModifier,
   TermExpression,
 } from "./ast";
+import { Context } from "./index";
 
-export type EvalResult = { value: number; source: Expression } & (
-  | {
-      kind: "roll";
-      rolls: number[];
-      rawRolls: number[];
-      dropped: number[];
-    }
-  | { kind: "num" }
-  | { kind: "ident" }
-  | {
-      kind: "binary";
-      value: number;
-      intermediate: { lhs: EvalResult; op: Operator; rhs: EvalResult };
-    }
-);
+export type EvalResult =
+  | RollEvalResult
+  | NumEvalResult
+  | IdentEvalResult
+  | BinOpEvalResult;
 
-export type Context = {
-  data: Map<string, number>;
+type BaseEvalResult = { value: number; source: Expression };
+
+export type RollEvalResult = BaseEvalResult & {
+  kind: "roll";
+  rolls: number[];
+  rawRolls: number[];
+  dropped: number[];
+};
+
+export type NumEvalResult = BaseEvalResult & {
+  kind: "num";
+};
+
+export type IdentEvalResult = BaseEvalResult & {
+  kind: "ident";
+};
+
+export type BinOpEvalResult = BaseEvalResult & {
+  kind: "binary";
+  value: number;
+  intermediate: { lhs: EvalResult; op: Operator; rhs: EvalResult };
 };
 
 export function evaluate(expr: Expression, ctx: Context): EvalResult {
@@ -74,20 +84,20 @@ function evaluateTerm(expr: TermExpression, ctx: Context): EvalResult {
       );
     return { kind: "ident", value, source: expr };
   }
-  return evaluateRoll(expr, term);
+  return evaluateRoll(expr, term, ctx);
 }
 
-function rand(sides: number) {
-  return Math.floor(Math.random() * sides) + 1;
-}
-
-function evaluateRoll(expr: TermExpression, roll: Roll): EvalResult {
+function evaluateRoll(
+  expr: TermExpression,
+  roll: Roll,
+  ctx: Context
+): EvalResult {
   const { count, sides, modifier } = roll;
   const rawRolls: number[] = [];
   for (let i = 0; i < count; i++) {
     let result: number;
     do {
-      result = rand(sides);
+      result = ctx.randomProvider(sides);
     } while (shouldReroll(result, modifier));
 
     rawRolls.push(result);

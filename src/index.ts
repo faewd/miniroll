@@ -1,5 +1,5 @@
 import { parse } from "./parser";
-import { Context, EvalResult, evaluate } from "./eval";
+import { EvalResult, evaluate } from "./eval";
 import { describe } from "./describe";
 
 export * from "./ast";
@@ -8,19 +8,28 @@ export * from "./parser";
 export * from "./eval";
 export * from "./describe";
 
+export type Roller = (dice: string) => RollResult;
+
 export type RollResult = {
   result: number;
   calculation: EvalResult;
   normalized: string;
 };
 
+export type RandomProvider = (sides: number) => number;
+
+export type Context = {
+  data: Map<string, number>;
+  randomProvider: RandomProvider;
+};
+
+const DEFAULT_CONTEXT: Context = {
+  data: new Map<string, number>(),
+  randomProvider: (sides) => Math.floor(Math.random() * sides) + 1,
+};
+
 export function roll(dice: string, config?: Partial<Context>): RollResult {
-  const ctx = Object.assign(
-    {
-      data: new Map<string, number>(),
-    },
-    config
-  );
+  const ctx = Object.assign(DEFAULT_CONTEXT, config);
 
   const evalResult = evaluate(parse(dice), ctx);
 
@@ -31,4 +40,6 @@ export function roll(dice: string, config?: Partial<Context>): RollResult {
   };
 }
 
-console.log(roll("4d6kH3+5"));
+export function createRoller(config: Partial<Context>): Roller {
+  return (dice) => roll(dice, config);
+}
