@@ -3,7 +3,7 @@
   "description": "A TypeScript-first dice rolling library.",
   "author": "faewd <mail@faew.dev> (https://faew.dev)",
   "license": "ISC",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "vitest",
