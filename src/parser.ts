@@ -9,7 +9,7 @@ import {
 import { ParserError } from "./error";
 
 const DICE_PATTERN =
-  /^(?<count>\d+)?d(?<sides>\d+)(?<modifier>(([dk][hl]\d*)|rr(?<comparator><>|<=?|>=?|=)?(?<target>\d+)|!)?)/i;
+  /^(?<count>\d+)?d(?<sides>\d+)(?<modifier>(([dk][hl]\d*)|(rr(?<comparator><>|<=?|>=?|=)?(?<target>\d+))|(!(?<depth>\d+)?))?)/i;
 const IDENT_PATTERN = /^[a-zA-Z_\.][a-zA-Z_\.0-9]*/;
 const NUM_PATTERN = /^(0|([1-9][0-9]*))/;
 
@@ -127,13 +127,19 @@ function resolveRollModifier(
   roll: string
 ): RollModifier {
   const mod = modifier.toLowerCase();
-  if (mod === "!") return { kind: "explode" };
+
+  if (mod.startsWith("!")) {
+    const depth = groups.depth ? parseInt(groups.depth, 10) : 100;
+    return { kind: "explode", depth };
+  }
+
   if (mod.startsWith("k") || mod.startsWith("d")) {
     const kind = mod.startsWith("k") ? "keep" : "drop";
     const end = mod.charAt(1) === "l" ? "lowest" : "highest";
     const count = parseInt(mod.slice(2) || "1");
     return { kind, end, count };
   }
+
   if (mod.startsWith("rr")) {
     const comparator = (groups.comparator ? groups.comparator : "=") as any;
     const target = parseInt(groups.target, 10);

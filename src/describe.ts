@@ -19,7 +19,9 @@ function describeTerm(term: Term): string {
 
 function describeModifier(modifier: RollModifier | null): string {
   if (modifier === null) return "";
-  if (modifier.kind === "explode") return "!";
+  if (modifier.kind === "explode") {
+    return "!" + (modifier.depth === 1000 ? "" : `${modifier.depth}`);
+  }
   if (modifier.kind === "reroll")
     return `rr${modifier.comparator}${modifier.target}`;
   const dropOrKeep = modifier.kind === "drop" ? "d" : "k";

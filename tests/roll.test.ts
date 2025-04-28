@@ -42,7 +42,7 @@ describe("roll", () => {
     expect(rollResult.rolls.length).toBe(3);
   });
 
-  describe("exploding die", () => {
+  describe("exploding dice", () => {
     test("one exploding die with one reroll", () => {
       mockRandom.prime(4, 3);
       const res = roll("1d4!");
@@ -86,6 +86,24 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(5);
+    });
+
+    test("one exploding die limited by set depth", () => {
+      mockRandom.prime(4, 4, 4, 3);
+      const res = roll("1d4!2");
+      expect(res.result).toBe(12);
+      expect(res.calculation.kind).toBe("roll");
+      const rollResult = res.calculation as RollEvalResult;
+      expect(rollResult.rolls).toStrictEqual([4, 4, 4]);
+    });
+
+    test("one exploding die NOT limited by set depth", () => {
+      mockRandom.prime(4, 4, 4, 3);
+      const res = roll("1d4!4");
+      expect(res.result).toBe(15);
+      expect(res.calculation.kind).toBe("roll");
+      const rollResult = res.calculation as RollEvalResult;
+      expect(rollResult.rolls).toStrictEqual([4, 4, 4, 3]);
     });
   });
 

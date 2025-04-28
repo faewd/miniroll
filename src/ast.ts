@@ -7,7 +7,7 @@ export type Roll = {
 export type ComparisonOperator = "=" | "<>" | "<" | ">" | "<=" | ">=";
 
 export type RollModifier =
-  | { kind: "explode" }
+  | { kind: "explode"; depth: number }
   | { kind: "keep"; count: number; end: "highest" | "lowest" }
   | { kind: "drop"; count: number; end: "highest" | "lowest" }
   | {

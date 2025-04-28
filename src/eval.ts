@@ -94,6 +94,7 @@ function evaluateRoll(
 ): EvalResult {
   const { count, sides, modifier } = roll;
   const rawRolls: number[] = [];
+  let explodeDepth = 0;
   for (let i = 0; i < count; i++) {
     let result: number;
     do {
@@ -103,7 +104,16 @@ function evaluateRoll(
     rawRolls.push(result);
 
     // Roll again if exploding
-    if (modifier?.kind === "explode" && result === sides) i -= 1;
+    if (
+      modifier?.kind === "explode" &&
+      result === sides &&
+      explodeDepth < modifier.depth
+    ) {
+      i -= 1;
+      explodeDepth += 1;
+    } else {
+      explodeDepth = 0;
+    }
   }
 
   const { dropped, kept } = dropOrKeepRolls(rawRolls, modifier);
