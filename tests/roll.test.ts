@@ -1,5 +1,10 @@
 import { expect, test, describe, beforeEach, beforeAll } from "vitest";
-import { createRoller, Roller, RollEvalResult } from "../src/index";
+import {
+  createRoller,
+  KeepDropRollEvalResult,
+  Roller,
+  RollEvalResult,
+} from "../src/index";
 import { createMockRandom, MockRandom } from "./mockRandom";
 
 describe("roll", () => {
@@ -50,6 +55,7 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(2);
+      expect(rollResult.intermediateText).toBe("[(**4** + 3)]");
     });
 
     test("one exploding die with multiple rerolls", () => {
@@ -59,6 +65,7 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(4);
+      expect(rollResult.intermediateText).toBe("[(**4** + 4 + 4 + 1)]");
     });
 
     test("multiple exploding dice with one reroll for one die", () => {
@@ -68,6 +75,7 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(5);
+      expect(rollResult.intermediateText).toBe("[2 + 2 + (**6** + 5) + 2]");
     });
 
     test("multiple exploding dice with one reroll each", () => {
@@ -77,15 +85,19 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(6);
+      expect(rollResult.intermediateText).toBe(
+        "[(**6** + 5) + (**6** + 4) + (**6** + 3)]"
+      );
     });
 
-    test("multiple exploding dice multiple rerolls for one die", () => {
+    test("multiple exploding dice with multiple rerolls for one die", () => {
       mockRandom.prime(1, 4, 4, 4, 3);
       const res = roll("2d4!");
       expect(res.result).toBe(16);
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls.length).toBe(5);
+      expect(rollResult.intermediateText).toBe("[1 + (**4** + 4 + 4 + 3)]");
     });
 
     test("one exploding die limited by set depth", () => {
@@ -95,6 +107,7 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls).toStrictEqual([4, 4, 4]);
+      expect(rollResult.intermediateText).toBe("[(**4** + 4 + 4)]");
     });
 
     test("one exploding die NOT limited by set depth", () => {
@@ -104,6 +117,7 @@ describe("roll", () => {
       expect(res.calculation.kind).toBe("roll");
       const rollResult = res.calculation as RollEvalResult;
       expect(rollResult.rolls).toStrictEqual([4, 4, 4, 3]);
+      expect(rollResult.intermediateText).toBe("[(**4** + 4 + 4 + 3)]");
     });
   });
 
@@ -113,9 +127,10 @@ describe("roll", () => {
       const res = roll("4d6dL");
       expect(res.result).toBe(14);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([2]);
+      expect(rollResult.intermediateText).toBe("[5 + 6 + 3 + ~~2~~]");
     });
 
     test("drop lowest one explicitly", () => {
@@ -123,9 +138,10 @@ describe("roll", () => {
       const res = roll("4d6dL1");
       expect(res.result).toBe(14);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([2]);
+      expect(rollResult.intermediateText).toBe("[5 + 6 + 3 + ~~2~~]");
     });
 
     test("drop lowest multiple", () => {
@@ -133,9 +149,10 @@ describe("roll", () => {
       const res = roll("4d6dL3");
       expect(res.result).toBe(6);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([2, 3, 5]);
+      expect(rollResult.intermediateText).toBe("[6 + ~~2~~ + ~~3~~ + ~~5~~]");
     });
 
     test("drop highest one implicitly", () => {
@@ -143,9 +160,10 @@ describe("roll", () => {
       const res = roll("4d6dH");
       expect(res.result).toBe(10);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([6]);
+      expect(rollResult.intermediateText).toBe("[5 + 2 + 3 + ~~6~~]");
     });
 
     test("drop highest one explicitly", () => {
@@ -153,9 +171,10 @@ describe("roll", () => {
       const res = roll("4d6dH1");
       expect(res.result).toBe(10);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([6]);
+      expect(rollResult.intermediateText).toBe("[5 + 2 + 3 + ~~6~~]");
     });
 
     test("drop highest multiple", () => {
@@ -163,9 +182,10 @@ describe("roll", () => {
       const res = roll("4d6dH3");
       expect(res.result).toBe(2);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([3, 5, 6]);
+      expect(rollResult.intermediateText).toBe("[2 + ~~3~~ + ~~5~~ + ~~6~~]");
     });
 
     test("keep lowest one implicitly", () => {
@@ -173,9 +193,10 @@ describe("roll", () => {
       const res = roll("4d6kL");
       expect(res.result).toBe(2);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([5, 6, 3]);
+      expect(rollResult.intermediateText).toBe("[2 + ~~5~~ + ~~6~~ + ~~3~~]");
     });
 
     test("keep lowest one explicitly", () => {
@@ -183,9 +204,10 @@ describe("roll", () => {
       const res = roll("4d6kL1");
       expect(res.result).toBe(2);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([5, 6, 3]);
+      expect(rollResult.intermediateText).toBe("[2 + ~~5~~ + ~~6~~ + ~~3~~]");
     });
 
     test("keep lowest multiple", () => {
@@ -193,9 +215,10 @@ describe("roll", () => {
       const res = roll("4d6kL3");
       expect(res.result).toBe(10);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([6]);
+      expect(rollResult.intermediateText).toBe("[2 + 3 + 5 + ~~6~~]");
     });
 
     test("keep highest one implicitly", () => {
@@ -203,9 +226,10 @@ describe("roll", () => {
       const res = roll("4d6kH");
       expect(res.result).toBe(6);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([5, 2, 3]);
+      expect(rollResult.intermediateText).toBe("[6 + ~~5~~ + ~~2~~ + ~~3~~]");
     });
 
     test("keep highest one explicitly", () => {
@@ -213,9 +237,10 @@ describe("roll", () => {
       const res = roll("4d6kH1");
       expect(res.result).toBe(6);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(1);
       expect(rollResult.dropped).toStrictEqual([5, 2, 3]);
+      expect(rollResult.intermediateText).toBe("[6 + ~~5~~ + ~~2~~ + ~~3~~]");
     });
 
     test("keep highest multiple", () => {
@@ -223,9 +248,10 @@ describe("roll", () => {
       const res = roll("4d6kH3");
       expect(res.result).toBe(14);
       expect(res.calculation.kind).toBe("roll");
-      const rollResult = res.calculation as RollEvalResult;
+      const rollResult = res.calculation as KeepDropRollEvalResult;
       expect(rollResult.rolls.length).toBe(3);
       expect(rollResult.dropped).toStrictEqual([2]);
+      expect(rollResult.intermediateText).toBe("[3 + 5 + 6 + ~~2~~]");
     });
   });
 });

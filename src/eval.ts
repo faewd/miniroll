@@ -28,24 +28,26 @@ export type RollEvalResult = {
   source: Expression;
 } & (UnmodifiedRollEvalResult | ModifiedRollEvalResult);
 
-type UnmodifiedRollEvalResult = BaseRollEvalResult & { modifier: "none" };
+export type UnmodifiedRollEvalResult = BaseRollEvalResult & {
+  modifier: "none";
+};
 
-type ModifiedRollEvalResult =
+export type ModifiedRollEvalResult =
   | RerollRollEvalResult
   | KeepDropRollEvalResult
   | ExplodeRollEvalResult;
 
-type RerollRollEvalResult = BaseRollEvalResult & {
+export type RerollRollEvalResult = BaseRollEvalResult & {
   modifier: "reroll";
   rerollGroups: RerollGroup[];
 };
 
-type KeepDropRollEvalResult = BaseRollEvalResult & {
+export type KeepDropRollEvalResult = BaseRollEvalResult & {
   modifier: "keep-drop";
   dropped: number[];
 };
 
-type ExplodeRollEvalResult = BaseRollEvalResult & {
+export type ExplodeRollEvalResult = BaseRollEvalResult & {
   modifier: "explode";
   explodeGroups: ExplodeGroup[];
 };
