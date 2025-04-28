@@ -1,5 +1,6 @@
 import {
   BinaryExpression,
+  ComparisonOperator,
   Expression,
   Operator,
   Roll,
@@ -16,11 +17,45 @@ export type EvalResult =
 
 type BaseEvalResult = { value: number; source: Expression };
 
-export type RollEvalResult = BaseEvalResult & {
-  kind: "roll";
+type BaseRollEvalResult = {
+  value: number;
   rolls: number[];
-  rawRolls: number[];
+  intermediateText: string;
+};
+
+export type RollEvalResult = {
+  kind: "roll";
+  source: Expression;
+} & (UnmodifiedRollEvalResult | ModifiedRollEvalResult);
+
+type UnmodifiedRollEvalResult = BaseRollEvalResult & { modifier: "none" };
+
+type ModifiedRollEvalResult =
+  | RerollRollEvalResult
+  | KeepDropRollEvalResult
+  | ExplodeRollEvalResult;
+
+type RerollRollEvalResult = BaseRollEvalResult & {
+  modifier: "reroll";
+  rerollGroups: RerollGroup[];
+};
+
+type KeepDropRollEvalResult = BaseRollEvalResult & {
+  modifier: "keep-drop";
   dropped: number[];
+};
+
+type ExplodeRollEvalResult = BaseRollEvalResult & {
+  modifier: "explode";
+  explodeGroups: ExplodeGroup[];
+};
+
+type RerollGroup = { discarded: number[]; final: number };
+
+type ExplodeGroup = {
+  initial: number;
+  additional: number[];
+  total: number;
 };
 
 export type NumEvalResult = BaseEvalResult & {
@@ -91,79 +126,185 @@ function evaluateRoll(
   expr: TermExpression,
   roll: Roll,
   ctx: Context
-): EvalResult {
-  const { count, sides, modifier } = roll;
-  const rawRolls: number[] = [];
-  let explodeDepth = 0;
-  for (let i = 0; i < count; i++) {
-    let result: number;
-    do {
-      result = ctx.randomProvider(sides);
-    } while (shouldReroll(result, modifier));
-
-    rawRolls.push(result);
-
-    // Roll again if exploding
-    if (
-      modifier?.kind === "explode" &&
-      result === sides &&
-      explodeDepth < modifier.depth
-    ) {
-      i -= 1;
-      explodeDepth += 1;
-    } else {
-      explodeDepth = 0;
-    }
-  }
-
-  const { dropped, kept } = dropOrKeepRolls(rawRolls, modifier);
-
-  const total = kept.reduce((a, b) => a + b);
+): RollEvalResult {
+  const result =
+    roll.modifier !== null
+      ? evaluateModifiedRoll(roll, roll.modifier, ctx)
+      : evaluateUnmodifiedRoll(roll, ctx);
 
   return {
     kind: "roll",
-    value: total,
-    rolls: kept,
-    rawRolls,
-    dropped,
     source: expr,
+    ...result,
   };
 }
 
-function shouldReroll(result: number, modifier: RollModifier | null) {
-  if (modifier?.kind === "reroll") {
-    const { target, comparator } = modifier;
-    switch (comparator) {
-      case "=":
-        return result == target;
-      case "<>":
-        return result != target;
-      case "<":
-        return result < target;
-      case ">":
-        return result > target;
-      case "<=":
-        return result <= target;
-      case ">=":
-        return result >= target;
-    }
+function sum(nums: number[]): number {
+  return nums.reduce((a, b) => a + b);
+}
+
+function evaluateUnmodifiedRoll(
+  roll: Roll,
+  ctx: Context
+): UnmodifiedRollEvalResult {
+  const rolls: number[] = [];
+  for (let i = 0; i < roll.count; i++) {
+    rolls.push(ctx.randomProvider(roll.sides));
   }
-  return false;
+  return {
+    modifier: "none",
+    rolls,
+    value: sum(rolls),
+    intermediateText: `[${rolls.join(" + ")}]`,
+  };
+}
+
+function evaluateModifiedRoll(
+  roll: Roll,
+  mod: RollModifier,
+  ctx: Context
+): ModifiedRollEvalResult {
+  switch (mod.kind) {
+    case "explode":
+      return evaluateExplodingRoll(roll, mod.depth, ctx);
+    case "keep":
+    case "drop":
+      return evaluateKeepDropRoll(roll, mod.kind, mod.count, mod.end, ctx);
+    case "reroll":
+      return evaluateRerollRoll(roll, mod.comparator, mod.target, ctx);
+  }
+}
+
+function evaluateExplodingRoll(
+  roll: Roll,
+  maxDepth: number,
+  ctx: Context
+): ExplodeRollEvalResult {
+  const rolls: number[] = [];
+  const groups: ExplodeGroup[] = [];
+  for (let i = 0; i < roll.count; i++) {
+    const group: ExplodeGroup = { initial: -1, additional: [], total: 0 };
+    let current: number;
+    let explodeDepth = 0;
+    do {
+      current = ctx.randomProvider(roll.sides);
+      rolls.push(current);
+      if (group.initial === -1) {
+        group.initial = current;
+      } else {
+        group.additional.push(current);
+      }
+      group.total += current;
+      explodeDepth += 1;
+    } while (current === roll.sides && explodeDepth <= maxDepth);
+    groups.push(group);
+  }
+
+  const groupTexts = groups.map(
+    (g) => `(**${g.initial}** + ${g.additional.join(" + ")})`
+  );
+
+  return {
+    modifier: "explode",
+    rolls,
+    value: sum(rolls),
+    explodeGroups: groups,
+    intermediateText: `[${groupTexts.join(" + ")}]`,
+  };
+}
+
+function evaluateKeepDropRoll(
+  roll: Roll,
+  kind: "keep" | "drop",
+  count: number,
+  end: "highest" | "lowest",
+  ctx: Context
+): KeepDropRollEvalResult {
+  const rawRolls: number[] = [];
+  for (let i = 0; i < roll.count; i++) {
+    rawRolls.push(ctx.randomProvider(roll.sides));
+  }
+
+  const { dropped, kept } = dropOrKeepRolls(rawRolls, kind, count, end);
+  const diceTexts = [...kept, ...dropped.map((d) => `~~${dropped}~~`)];
+
+  return {
+    modifier: "keep-drop",
+    rolls: kept,
+    dropped,
+    value: kept.reduce((a, b) => a + b),
+    intermediateText: `[${diceTexts.join(" + ")}]`,
+  };
+}
+
+function evaluateRerollRoll(
+  roll: Roll,
+  comparator: ComparisonOperator,
+  target: number,
+  ctx: Context
+): RerollRollEvalResult {
+  const rolls: number[] = [];
+  const groups: RerollGroup[] = [];
+  for (let i = 0; i < roll.count; i++) {
+    const group: RerollGroup = {
+      discarded: [],
+      final: -1,
+    };
+
+    while (group.final === -1) {
+      const result = ctx.randomProvider(roll.sides);
+      if (shouldReroll(group.final, comparator, target)) {
+        group.discarded.push(result);
+      } else {
+        group.final = result;
+      }
+    }
+
+    rolls.push(group.final);
+    groups.push(group);
+  }
+
+  const groupTexts = groups.map(
+    (g) => `(${g.discarded.map((d) => `~~${d}~~`).join(" ")} ${g.final})`
+  );
+
+  return {
+    modifier: "reroll",
+    rolls,
+    value: sum(rolls),
+    rerollGroups: groups,
+    intermediateText: `[${groupTexts}]`,
+  };
+}
+
+function shouldReroll(
+  result: number,
+  comparator: ComparisonOperator,
+  target: number
+) {
+  switch (comparator) {
+    case "=":
+      return result == target;
+    case "<>":
+      return result != target;
+    case "<":
+      return result < target;
+    case ">":
+      return result > target;
+    case "<=":
+      return result <= target;
+    case ">=":
+      return result >= target;
+  }
 }
 
 function dropOrKeepRolls(
   rolls: number[],
-  modifier: RollModifier | null
+  kind: "keep" | "drop",
+  count: number,
+  end: "highest" | "lowest"
 ): { dropped: number[]; kept: number[] } {
-  if (
-    modifier === null ||
-    (modifier.kind !== "drop" && modifier.kind !== "keep")
-  )
-    return { dropped: [], kept: [...rolls] };
-
   const sorted = rolls.toSorted((a, b) => a - b);
-
-  const { kind, end, count } = modifier;
 
   const selection =
     end === "lowest" ? sorted.splice(0, count) : sorted.splice(-count, count);
