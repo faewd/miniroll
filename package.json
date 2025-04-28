@@ -8,7 +8,9 @@
   "types": "dist/miniroll.d.ts",
   "scripts": {
     "test": "vitest",
-    "build": "rollup -c"
+    "build": "rollup -c",
+    "prepublishOnly": "npm run test -- run",
+    "prepare": "npm run build"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.1.2",
