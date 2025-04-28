@@ -257,7 +257,7 @@ function evaluateRerollRoll(
 
     while (group.final === -1) {
       const result = ctx.randomProvider(roll.sides);
-      if (shouldReroll(group.final, comparator, target)) {
+      if (shouldReroll(result, comparator, target)) {
         group.discarded.push(result);
       } else {
         group.final = result;
@@ -279,7 +279,7 @@ function evaluateRerollRoll(
     rolls,
     value: sum(rolls),
     rerollGroups: groups,
-    intermediateText: `[${groupTexts}]`,
+    intermediateText: `[${groupTexts.join(" + ")}]`,
   };
 }
 
