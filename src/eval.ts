@@ -200,8 +200,10 @@ function evaluateExplodingRoll(
     groups.push(group);
   }
 
-  const groupTexts = groups.map(
-    (g) => `(**${g.initial}** + ${g.additional.join(" + ")})`
+  const groupTexts = groups.map((g) =>
+    g.additional.length === 0
+      ? g.initial
+      : `(**${g.initial}** + ${g.additional.join(" + ")})`
   );
 
   return {
@@ -226,7 +228,7 @@ function evaluateKeepDropRoll(
   }
 
   const { dropped, kept } = dropOrKeepRolls(rawRolls, kind, count, end);
-  const diceTexts = [...kept, ...dropped.map((d) => `~~${dropped}~~`)];
+  const diceTexts = [...kept, ...dropped.map((d) => `~~${d}~~`)];
 
   return {
     modifier: "keep-drop",
@@ -264,8 +266,10 @@ function evaluateRerollRoll(
     groups.push(group);
   }
 
-  const groupTexts = groups.map(
-    (g) => `(${g.discarded.map((d) => `~~${d}~~`).join(" ")} ${g.final})`
+  const groupTexts = groups.map((g) =>
+    g.discarded.length === 0
+      ? g.final
+      : `(${g.discarded.map((d) => `~~${d}~~`).join(" ")} ${g.final})`
   );
 
   return {
