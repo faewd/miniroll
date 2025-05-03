@@ -11,7 +11,7 @@ export function describe(expr: Expression): string {
 }
 
 function describeTerm(term: Term): string {
-  if (typeof term === "string") return term;
+  if (typeof term === "string") return term.toUpperCase();
   if (typeof term === "number") return String(term);
   const { count, sides, modifier } = term;
   return `${count}d${sides}${describeModifier(modifier)}`;

@@ -114,7 +114,7 @@ function evaluateTerm(expr: TermExpression, ctx: Context): EvalResult {
   if (typeof term === "number")
     return { kind: "num", value: term, source: expr };
   if (typeof term === "string") {
-    const value = ctx.data.get(term);
+    const value = ctx.data.get(term.toUpperCase());
     if (value === undefined)
       throw new EvalError(
         `Failed to evaluate term '${term}' - identifier is undefined`
